@@ -1,4 +1,5 @@
 // **N3Writer** writes N3 documents.
+import RelativizeUrl from 'relativize-url';
 import namespaces from './IRIs';
 import { default as N3DataFactory, Term } from './N3DataFactory';
 import { isDefaultGraph } from './N3Util';
@@ -61,6 +62,10 @@ export default class N3Writer {
         this._baseMatcher = new RegExp(`^${escapeRegex(options.baseIRI)
             }${options.baseIRI.endsWith('/') ? '' : '[#?]'}`);
         this._baseLength = options.baseIRI.length;
+        if (options.allowParentReferences) {
+          this._baseOriginMatcher = new RegExp(`^${escapeRegex(new URL(options.baseIRI).origin)}`);
+          this._relater = new RelativizeUrl(options.baseIRI);
+        }
       }
     }
     else {
@@ -153,7 +158,10 @@ export default class N3Writer {
     }
     let iri = entity.value;
     // Use relative IRIs if requested and possible
-    if (this._baseMatcher && this._baseMatcher.test(iri))
+    if (this._baseOriginMatcher && this._baseOriginMatcher.test(iri)) {
+      iri = this._relater.relate(iri);
+    }
+    else if (this._baseMatcher && this._baseMatcher.test(iri))
       iri = iri.substr(this._baseLength);
     // Escape special characters
     if (escape.test(iri))

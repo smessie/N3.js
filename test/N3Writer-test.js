@@ -465,6 +465,48 @@ describe('Writer', () => {
       });
     });
 
+    it('uses partially match base IRIs when allowing parent references', done => {
+      const writer = new Writer({ baseIRI: 'https://pod.example/profile/card', allowParentReferences: true });
+      writer.addQuad(new Quad(
+          new NamedNode('https://pod.example/profile/card#me'),
+          new NamedNode('http://www.w3.org/2002/07/owl#sameAs'),
+          new NamedNode('https://pod.example/profile/card-1234.ttl')));
+      writer.end((error, output) => {
+        expect(output).toBe(
+            '<#me> <http://www.w3.org/2002/07/owl#sameAs> <card-1234.ttl>.\n',
+        );
+        done(error);
+      });
+    });
+
+    it('uses partially match base IRIs with ../ when allowing parent references', done => {
+      const writer = new Writer({ baseIRI: 'https://pod.example/public/folder/card', allowParentReferences: true });
+      writer.addQuad(new Quad(
+          new NamedNode('https://pod.example/profile/card#me'),
+          new NamedNode('http://www.w3.org/2002/07/owl#sameAs'),
+          new NamedNode('https://pod.example/public/card-1234.ttl')));
+      writer.end((error, output) => {
+        expect(output).toBe(
+            '</profile/card#me> <http://www.w3.org/2002/07/owl#sameAs> <../card-1234.ttl>.\n',
+        );
+        done(error);
+      });
+    });
+
+    it('uses partially match base IRIs with more complex ../ when allowing parent references', done => {
+      const writer = new Writer({ baseIRI: 'https://pod.example/profile/public/folder/card', allowParentReferences: true });
+      writer.addQuad(new Quad(
+          new NamedNode('https://pod.example/profile/card#me'),
+          new NamedNode('http://www.w3.org/2002/07/owl#sameAs'),
+          new NamedNode('https://pod.example/profile/private/card-1234.ttl')));
+      writer.end((error, output) => {
+        expect(output).toBe(
+            '<../../card#me> <http://www.w3.org/2002/07/owl#sameAs> <../../private/card-1234.ttl>.\n',
+        );
+        done(error);
+      });
+    });
+
     it('should accept triples with separated components', done => {
       const writer = new Writer();
       writer.addQuad(new NamedNode('a'), new NamedNode('b'), new NamedNode('c'));
